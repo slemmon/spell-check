@@ -10,7 +10,6 @@
         Editor         = brackets.getModule("editor/Editor"),
         EditorManager  = brackets.getModule("editor/EditorManager");
 
-
     // Function to run when the menu item is clicked
     function handleHelloWorld() {
         //window.alert("Hello, world!");
@@ -79,13 +78,19 @@ define(function (require, exports, module) {
     var CommandManager  = brackets.getModule("command/CommandManager"),
         Menus           = brackets.getModule("command/Menus"),
         EditorManager   = brackets.getModule('editor/EditorManager'),
-        AppInit         = brackets.getModule("utils/AppInit");
+        AppInit         = brackets.getModule("utils/AppInit"),
+        ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
+
+    ExtensionUtils.loadStyleSheet(module, "styles.css");
 
     require('text');
 
-    require(['text!dictionaries/en_US/en_US.aff', 'text!dictionaries/en_US/en_US.dic'], function (aff, dict) {
+    var typo;
+
+    require(['text!dictionaries/en_US/en_US.aff', 'text!dictionaries/en_US/en_US.dic', 'typo'], function (aff, dict) {
         affBlob = aff;
         dictBlob = dict;
+        typo = new Typo("en_US");
     });
 
     AppInit.appReady(function () {
@@ -98,19 +103,6 @@ define(function (require, exports, module) {
 
     // Function to run when the menu item is clicked
     function handleHelloWorld() {
-        //window.alert("Hello, world!");
-
-        require(['typo',], function () {
-            //debugger;
-            var typo = new Typo("en_US");
-
-            //console.log(typo.check('spelling'));
-            //console.log(typo.suggest('speling'));
-            //console.log(affBlob);
-        });
-
-        //console.log(Typo);
-
         var editor = EditorManager.getCurrentFullEditor(),
             cm = editor._codeMirror;
 
@@ -118,7 +110,7 @@ define(function (require, exports, module) {
         var spellOverlay = {
             token: function (stream, state) {
               var ch;
-              if (stream.string.match(/^\s?\*.+|^\s?\/\/.+/ig)) {
+              if (stream.string.match(/^(\s+)?\*.+|^(\s+)?\/\/.+/ig)) {
                   if (stream.match(rx_word)) {
                     while ((ch = stream.peek()) != null) {
                           if (!ch.match(rx_word)) {
@@ -126,11 +118,10 @@ define(function (require, exports, module) {
                           }
                           stream.next();
                     }
-                    //if (!typo.check(stream.current()))
-                    if (stream.current() === 'testFn') {
-                        return "spell-error";
-                    } else {
-                        console.log(stream.current());
+
+                    console.log(stream.current(), typo.check(stream.current()));
+                    if (typo.check(stream.current()) === false) {
+                        return "underline";
                     }
                     return null;
                   }

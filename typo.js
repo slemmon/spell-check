@@ -50,11 +50,11 @@ var Typo = function (dictionary, affData, wordsData, settings) {
 	this.replacementTable = [];
 
 	this.flags = settings.flags || {};
-	console.log(affBlob);
+
 	if (dictionary) {
 		this.dictionary = dictionary;
 
-		if (this.platform == "chrome") {
+		/*if (this.platform == "chrome") {
 			if (!affData) affData = this._readFile(chrome.extension.getURL("lib/typo/dictionaries/" + dictionary + "/" + dictionary + ".aff"));
 			if (!wordsData) wordsData = this._readFile(chrome.extension.getURL("lib/typo/dictionaries/" + dictionary + "/" + dictionary + ".dic"));
 		} else {
@@ -62,7 +62,9 @@ var Typo = function (dictionary, affData, wordsData, settings) {
 
 			if (!affData) affData = this._readFile(path + "/" + dictionary + "/" + dictionary + ".aff");
 			if (!wordsData) wordsData = this._readFile(path + "/" + dictionary + "/" + dictionary + ".dic");
-		}
+		}*/
+        affData = affBlob;
+        wordsData = dictBlob;
 
 		this.rules = this._parseAFF(affData);
 
@@ -496,6 +498,9 @@ Typo.prototype = {
 	 */
 
 	check : function (aWord) {
+		if (aWord === '' || aWord === undefined || aWord === null) {
+			return null;
+		}
 		// Remove leading and trailing whitespace
 		var trimmedWord = aWord.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
 
