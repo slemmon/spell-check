@@ -1,74 +1,6 @@
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
 /*global define, $, brackets, window */
 
-/** Simple extension that adds a "File > Hello World" menu item */
-/*define(function (require, exports, module) {
-    "use strict";
-
-    var CommandManager = brackets.getModule("command/CommandManager"),
-        Menus          = brackets.getModule("command/Menus"),
-        Editor         = brackets.getModule("editor/Editor"),
-        EditorManager  = brackets.getModule("editor/EditorManager");
-
-    // Function to run when the menu item is clicked
-    function handleHelloWorld() {
-        //window.alert("Hello, world!");
-        //console.log(Editor);
-        //console.log(EditorManager.getCurrentFullEditor());
-
-        var editor  = EditorManager.getCurrentFullEditor(),
-            cm      = editor ? editor._codeMirror : null;
-
-        var mode = {
-            token: function (stream, state) {
-                var rx_word = "!\"#$%&()*+,-./:;<=>?@[\\\\\\]^_`{|}~";
-
-                //if (stream.match (rx_word) && typo && !typo.check (stream.current ()))
-                console.log(stream.match(//, true, true));
-                if (stream.match(rx_word)) {
-                    console.log(stream.current());
-                    return "spell-error"; //CSS class: cm-spell-error
-                } else {
-                    console.log(stream.current());
-                }
-
-                while (stream.next () != null) {
-                    if (stream.match (rx_word, false)) return null;
-                }
-
-                return null;
-            },
-            flattenSpans: false
-        };
-
-        // Update CodeMirror overlay if editor is available
-        if (cm) {
-            //cm.removeOverlay(indentGuidesOverlay);
-            //if (enabled) {
-                //cm.addOverlay(indentGuidesOverlay);
-                //updateStyleRules();
-            //}
-            cm.refresh();
-            cm.removeOverlay(mode);
-            cm.addOverlay(mode);
-        }
-    }
-
-
-    // First, register a command - a UI-less object associating an id to a handler
-    var MY_COMMAND_ID = "helloworld.sayhello";   // package-style naming to avoid collisions
-    CommandManager.register("Hello World", MY_COMMAND_ID, handleHelloWorld);
-
-    // Then create a menu item bound to the command
-    // The label of the menu item is the name we gave the command (see above)
-    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
-    menu.addMenuItem(MY_COMMAND_ID);
-
-    // We could also add a key binding at the same time:
-    //menu.addMenuItem(MY_COMMAND_ID, "Ctrl-Alt-H");
-    // (Note: "Ctrl" is automatically mapped to "Cmd" on Mac)
-});*/
-
 var affBlob, dictBlob;
 
 /** Simple extension that adds a "File > Hello World" menu item */
@@ -77,9 +9,33 @@ define(function (require, exports, module) {
 
     var CommandManager  = brackets.getModule("command/CommandManager"),
         Menus           = brackets.getModule("command/Menus"),
+        Editor          = brackets.getModule('editor/Editor'),
         EditorManager   = brackets.getModule('editor/EditorManager'),
         AppInit         = brackets.getModule("utils/AppInit"),
-        ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
+        ExtensionUtils  = brackets.getModule("utils/ExtensionUtils"),
+        Menus           = brackets.getModule("command/Menus");
+
+    /*
+    // context menu
+    var spellingContextId = 'spellingContextId';
+    var testFn = function () {
+        console.log('Test Function');
+    };
+    CommandManager.register('TEST', spellingContextId, testFn);
+    var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
+    //contextMenu.addMenuItem(spellingContextId);
+
+    $(contextMenu).on("beforeContextMenuOpen", function (a) {
+        var t = 'a-' + 0;
+        CommandManager.register('TEST', t, testFn)
+        contextMenu.addMenuItem(t);
+        //console.log(EditorManager.getCurrentFullEditor().getSelection());
+    });*/
+
+    console.log(Menus.ContextMenu.assignContextMenuToSelector);
+
+    //var myContextMenu = Menus.registerContextMenu('myMenu');
+    //console.log(myContextMenu);
 
     ExtensionUtils.loadStyleSheet(module, "styles.css");
 
@@ -93,19 +49,26 @@ define(function (require, exports, module) {
         typo = new Typo("en_US");
     });
 
+    var editor, cm;
+
     AppInit.appReady(function () {
         AppInit.htmlReady(function () {
             EditorManager.on('activeEditorChange', function () {
+                editor = EditorManager.getCurrentFullEditor(),
+                cm = editor._codeMirror;
+
                 handleHelloWorld();
+
+                var myEditor = EditorManager.getActiveEditor();
+                $(myEditor).on('cursorActivity', function (a, b) {
+                    //console.log(a);
+                });
             });
         });
     });
 
     // Function to run when the menu item is clicked
     function handleHelloWorld() {
-        var editor = EditorManager.getCurrentFullEditor(),
-            cm = editor._codeMirror;
-
         var rx_word = new RegExp("[^\!\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ ]");
         var spellOverlay = {
             token: function (stream, state) {
@@ -119,7 +82,6 @@ define(function (require, exports, module) {
                           stream.next();
                     }
 
-                    console.log(stream.current(), typo.check(stream.current()));
                     if (typo.check(stream.current()) === false) {
                         return "underline";
                     }
@@ -136,7 +98,6 @@ define(function (require, exports, module) {
             cm.addOverlay(spellOverlay);
         }
     }
-
 
     // First, register a command - a UI-less object associating an id to a handler
     var MY_COMMAND_ID = "helloworld.sayhello";   // package-style naming to avoid collisions
