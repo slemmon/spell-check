@@ -61,8 +61,27 @@ define(function (require, exports, module) {
 
                 var myEditor = EditorManager.getActiveEditor();
                 $(myEditor).on('cursorActivity', function (a, b) {
-                    //console.log(a);
+                    var c = myEditor._codeMirror;
+
+                    var A1 = c.getCursor().line;
+                    var A2 = c.getCursor().ch;
+
+                    var B1 = c.findWordAt({line: A1, ch: A2}).anchor.ch;
+                    var B2 = c.findWordAt({line: A1, ch: A2}).head.ch;
+
+                    console.log(c.getRange({line: A1,ch: B1}, {line: A1,ch: B2}));
+                    //c.replaceRange('EDITED', {line: A1,ch: B1}, {line: A1,ch: B2});
                 });
+
+                /*$(myEditor).on('cursorActivity', function(){
+                    var A1 = myEditor.getCursor().line;
+                    var A2 = myEditor.getCursor().ch;
+
+                    var B1 = myEditor.findWordAt({line: A1, ch: A2}).anchor.ch;
+                    var B2 = myEditor.findWordAt({line: A1, ch: A2}).head.ch;
+
+                    console.log(myEditor.getRange({line: A1,ch: B1}, {line: A1,ch: B2}));
+                });*/
             });
         });
     });
