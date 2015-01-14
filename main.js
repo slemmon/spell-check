@@ -88,10 +88,15 @@ define(function (require, exports, module) {
 
     // Function to run when the menu item is clicked
     function handleHelloWorld() {
-        var rx_word = new RegExp("[^\!\'\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ 0-9]");
+        //var rx_word = new RegExp("[^\!\'\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ 0-9]");
+        var rx_word = new RegExp('[a-z]', 'i');
+
+        // var camelCaseRegEx = new RegExp('([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*');  http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
+
         var spellOverlay = {
             token: function (stream, state) {
               var ch;
+              // conditional to check to see if the line is a single or block comment before checking the spelling
               if (stream.string.match(/^(\s+)?\*.+|^(\s+)?\/\/.+/ig)) {
                   if (stream.match(rx_word)) {
                     while ((ch = stream.peek()) != null) {
