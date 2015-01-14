@@ -88,7 +88,7 @@ define(function (require, exports, module) {
 
     // Function to run when the menu item is clicked
     function handleHelloWorld() {
-        var rx_word = new RegExp("[^\!\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ ]");
+        var rx_word = new RegExp("[^\!\'\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ 0-9]");
         var spellOverlay = {
             token: function (stream, state) {
               var ch;

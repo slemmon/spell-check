@@ -1,4 +1,6 @@
-// EDITED EDITED EDITED
+// single line commentz
+// 'zz'
+// 10
 
 var foo;
 
