@@ -32,8 +32,6 @@ define(function (require, exports, module) {
         //console.log(EditorManager.getCurrentFullEditor().getSelection());
     });*/
 
-    console.log(Menus.ContextMenu.assignContextMenuToSelector);
-
     //var myContextMenu = Menus.registerContextMenu('myMenu');
     //console.log(myContextMenu);
 
@@ -69,7 +67,20 @@ define(function (require, exports, module) {
                     var B1 = c.findWordAt({line: A1, ch: A2}).anchor.ch;
                     var B2 = c.findWordAt({line: A1, ch: A2}).head.ch;
 
-                    console.log(c.getRange({line: A1,ch: B1}, {line: A1,ch: B2}));
+                    //console.log(EditorManager.getCurrentFullEditor().getSelection());
+                    var sel = EditorManager.getCurrentFullEditor().getSelection();
+                    //console.log(c.getRange(sel.start, sel.end)); // SELECTED WORD
+
+                    /*var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
+
+                    $(contextMenu).on("beforeContextMenuOpen", function (a) {
+                        var t = 'a-' + 0;
+                        CommandManager.register('TEST', t, testFn);
+                        contextMenu.addMenuItem(t);
+                        //console.log(EditorManager.getCurrentFullEditor().getSelection());
+                    });*/
+
+                    //console.log(c.getRange({line: A1,ch: B1}, {line: A1,ch: B2})); //get the word at the cursor
                     //c.replaceRange('EDITED', {line: A1,ch: B1}, {line: A1,ch: B2});
                 });
 
@@ -82,6 +93,36 @@ define(function (require, exports, module) {
 
                     console.log(myEditor.getRange({line: A1,ch: B1}, {line: A1,ch: B2}));
                 });*/
+            });
+
+            var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
+
+            $(contextMenu).on("beforeContextMenuOpen", function (a) {
+                var c = EditorManager.getActiveEditor()._codeMirror;
+                var sel = EditorManager.getCurrentFullEditor().getSelection();
+
+                var suggestions = ['one', 'two'].reverse();
+
+                if (contextMenu.suggestionDivider) {
+                    contextMenu.removeMenuDivider(contextMenu.suggestionDivider);
+                }
+
+                if (contextMenu.suggestionItems && contextMenu.suggestionItems.length > 0) {
+                    contextMenu.suggestionItems.forEach(function (item) {
+                        contextMenu.removeMenuItem(item);
+                    });
+                }
+
+                contextMenu.suggestionDivider = contextMenu.addMenuDivider(Menus.FIRST).id;
+                contextMenu.suggestionItems = [];
+                suggestions.forEach(function (item, i) {
+                    var t = 'a-' + performance.now();
+                    contextMenu.suggestionItems.push(t);
+                    CommandManager.register(item, t, function () {
+                        c.replaceRange(item, sel.start, sel.end);
+                    });
+                    contextMenu.addMenuItem(t, null, Menus.FIRST);
+                });
             });
         });
     });
