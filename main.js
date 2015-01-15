@@ -3,7 +3,7 @@
 
 var affBlob, dictBlob;
 
-/** Simple extension that adds a "File > Hello World" menu item */
+/** Class description placeholder */
 define(function (require, exports, module) {
     "use strict";
 
@@ -13,7 +13,18 @@ define(function (require, exports, module) {
         EditorManager   = brackets.getModule('editor/EditorManager'),
         AppInit         = brackets.getModule("utils/AppInit"),
         ExtensionUtils  = brackets.getModule("utils/ExtensionUtils"),
-        Menus           = brackets.getModule("command/Menus");
+        FileUtils       = brackets.getModule('file/FileUtils'),
+        misses          = {},
+        typo, menu;
+
+    console.log(require);
+
+    require('text');
+    require(['text!dictionaries/en_US/en_US.aff', 'text!dictionaries/en_US/en_US.dic', 'typo'], function (aff, dict) {
+        affBlob = aff;
+        dictBlob = dict;
+        typo = new Typo("en_US");
+    });
 
     /*
     // context menu
@@ -37,52 +48,39 @@ define(function (require, exports, module) {
 
     ExtensionUtils.loadStyleSheet(module, "styles.css");
 
-    require('text');
-
-    var typo;
-
-    require(['text!dictionaries/en_US/en_US.aff', 'text!dictionaries/en_US/en_US.dic', 'typo'], function (aff, dict) {
-        affBlob = aff;
-        dictBlob = dict;
-        typo = new Typo("en_US");
-    });
-
-    var editor, cm;
-
     AppInit.appReady(function () {
         AppInit.htmlReady(function () {
+            // runs the following logic each time an editor (file) is focused
             EditorManager.on('activeEditorChange', function () {
-                editor = EditorManager.getCurrentFullEditor(),
-                cm = editor._codeMirror;
+                //editor = EditorManager.getCurrentFullEditor(),
+                //cm = editor._codeMirror;
 
-                handleHelloWorld();
+                spellCheckEditor();
 
-                var myEditor = EditorManager.getActiveEditor();
-                $(myEditor).on('cursorActivity', function (a, b) {
-                    var c = myEditor._codeMirror;
+                /*//var myEditor = EditorManager.getActiveEditor();
+                $(editor).on('cursorActivity', function (a, b) {
+                    var A1 = cm.getCursor().line;
+                    var A2 = cm.getCursor().ch;
 
-                    var A1 = c.getCursor().line;
-                    var A2 = c.getCursor().ch;
-
-                    var B1 = c.findWordAt({line: A1, ch: A2}).anchor.ch;
-                    var B2 = c.findWordAt({line: A1, ch: A2}).head.ch;
+                    var B1 = cm.findWordAt({line: A1, ch: A2}).anchor.ch;
+                    var B2 = cm.findWordAt({line: A1, ch: A2}).head.ch;
 
                     //console.log(EditorManager.getCurrentFullEditor().getSelection());
                     var sel = EditorManager.getCurrentFullEditor().getSelection();
                     //console.log(c.getRange(sel.start, sel.end)); // SELECTED WORD
 
-                    /*var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
+                    //var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 
-                    $(contextMenu).on("beforeContextMenuOpen", function (a) {
-                        var t = 'a-' + 0;
-                        CommandManager.register('TEST', t, testFn);
-                        contextMenu.addMenuItem(t);
+                    //$(contextMenu).on("beforeContextMenuOpen", function (a) {
+                        //var t = 'a-' + 0;
+                        //ComdmandManager.register('TEST', t, testFn);
+                        //contextMenu.addMenuItem(t);
                         //console.log(EditorManager.getCurrentFullEditor().getSelection());
-                    });*/
+                    //});
 
                     //console.log(c.getRange({line: A1,ch: B1}, {line: A1,ch: B2})); //get the word at the cursor
                     //c.replaceRange('EDITED', {line: A1,ch: B1}, {line: A1,ch: B2});
-                });
+                });*/
 
                 /*$(myEditor).on('cursorActivity', function(){
                     var A1 = myEditor.getCursor().line;
@@ -95,66 +93,111 @@ define(function (require, exports, module) {
                 });*/
             });
 
-            var contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
+            menu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 
-            $(contextMenu).on("beforeContextMenuOpen", function (a) {
-                var c = EditorManager.getActiveEditor()._codeMirror;
-                var sel = EditorManager.getCurrentFullEditor().getSelection();
+            $(menu).on("beforeContextMenuOpen", function (a) {
+                var editor = EditorManager.getCurrentFullEditor(),
+                    cm = editor._codeMirror,
+                    sel = editor.getSelection(),
+                    selected = cm.getRange(sel.start, sel.end),
+                    suggestions = ['one', 'two'].reverse(),
+                    divider = menu.suggestionDivider,
+                    lastItems = menu.suggestionItems;
 
-                var suggestions = ['one', 'two'].reverse();
-
-                if (contextMenu.suggestionDivider) {
-                    contextMenu.removeMenuDivider(contextMenu.suggestionDivider);
+                // remove the suggestions divider if it exists already
+                if (divider) {
+                    menu.removeMenuDivider(divider);
                 }
 
-                if (contextMenu.suggestionItems && contextMenu.suggestionItems.length > 0) {
-                    contextMenu.suggestionItems.forEach(function (item) {
-                        contextMenu.removeMenuItem(item);
+                // remove the last suggestions added to the menu if they exist
+                if (lastItems) {
+                    lastItems.forEach(function (item) {
+                        menu.removeMenuItem(item);
                     });
                 }
 
-                contextMenu.suggestionDivider = contextMenu.addMenuDivider(Menus.FIRST).id;
-                contextMenu.suggestionItems = [];
+                if (!misses[selected]) {
+                    return;
+                }
+
+                //if (misses[selected] === true) {
+                    var _initial = new Date();
+                    misses[selected] = typo.suggest(selected);
+                    var _final = new Date();
+                    console.log((_final.getTime() - _initial.getTime())/1000);
+                //}
+                console.log(misses[selected]);
+
+                menu.suggestionDivider = menu.addMenuDivider(Menus.FIRST).id;
+                menu.suggestionItems = [];
                 suggestions.forEach(function (item, i) {
                     var t = 'a-' + performance.now();
-                    contextMenu.suggestionItems.push(t);
+                    menu.suggestionItems.push(t);
                     CommandManager.register(item, t, function () {
-                        c.replaceRange(item, sel.start, sel.end);
+                        cm.replaceRange(item, sel.start, sel.end);
                     });
-                    contextMenu.addMenuItem(t, null, Menus.FIRST);
+                    menu.addMenuItem(t, null, Menus.FIRST);
                 });
             });
         });
     });
 
-    // Function to run when the menu item is clicked
-    function handleHelloWorld() {
-        //var rx_word = new RegExp("[^\!\'\"\#\$\%\&\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\ 0-9]");
-        var rx_word = new RegExp('[a-z]', 'i');
+    function evalLineType(line) {
+        var rx_js_block = /^(\s+)?\*.+/ig,  // javascript block comment
+            rx_js_line = /^(\s+)?\/\/.+/ig; // javascript single line comment
+
+        if (line.match(rx_js_block)) {
+            return true;
+        }
+        if (line.match(rx_js_line)) {
+            return true;
+        }
+        return false;
+    }
+
+    // spell check the current editor
+    function spellCheckEditor() {
+        var editor = EditorManager.getCurrentFullEditor(),
+            cm = editor ? editor._codeMirror : false,
+            rx_alpha = new RegExp('[a-z]', 'i');
 
         // var camelCaseRegEx = new RegExp('([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*');  http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
 
         var spellOverlay = {
             token: function (stream, state) {
-              var ch;
-              // conditional to check to see if the line is a single or block comment before checking the spelling
-              if (stream.string.match(/^(\s+)?\*.+|^(\s+)?\/\/.+/ig)) {
-                  if (stream.match(rx_word)) {
-                    while ((ch = stream.peek()) != null) {
-                          if (!ch.match(rx_word)) {
-                            break;
-                          }
-                          stream.next();
-                    }
+                var ch, current;
+                // see if the line type is allowed for spelling check
+                if (evalLineType(stream.string)) {
 
-                    if (typo.check(stream.current()) === false) {
-                        return "underline";
+                    if (stream.match(rx_alpha)) {
+                        while ((ch = stream.peek()) != null) {
+                            if (!ch.match(rx_alpha)) {
+                                break;
+                            }
+                            stream.next();
+                        }
+
+                        current = stream.current();
+
+                        if (misses[current] || typo.check(current) === false) {
+                            misses[current] = true;
+
+                            /*// web worker call for spelling suggestion
+                            var worker = new Worker('fetchSuggestions.js');
+
+                            worker.onMessage = function(e) {
+                                console.log(e);
+                            };
+
+                            worker.postMessage([current]);*/
+
+                            return "underline";
+                        }
+                        return null;
                     }
-                    return null;
-                  }
-              }
-              while (stream.next() != null && !stream.match(rx_word, false)) {}
-              return null;
+                }
+                while (stream.next() != null && !stream.match(rx_alpha, false)) {}
+                return null;
             }
         };
 
@@ -163,17 +206,4 @@ define(function (require, exports, module) {
             cm.addOverlay(spellOverlay);
         }
     }
-
-    // First, register a command - a UI-less object associating an id to a handler
-    var MY_COMMAND_ID = "helloworld.sayhello";   // package-style naming to avoid collisions
-    CommandManager.register("Hello World", MY_COMMAND_ID, handleHelloWorld);
-
-    // Then create a menu item bound to the command
-    // The label of the menu item is the name we gave the command (see above)
-    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
-    menu.addMenuItem(MY_COMMAND_ID);
-
-    // We could also add a key binding at the same time:
-    //menu.addMenuItem(MY_COMMAND_ID, "Ctrl-Alt-H");
-    // (Note: "Ctrl" is automatically mapped to "Cmd" on Mac)
 });

@@ -695,6 +695,7 @@ Typo.prototype = {
 					}
 				}
 
+                // I ASSUME THIS WOULD BE USED IN THE NEXT LOOP, BUT IT ISN'T ??
 				var inserts = [];
 
 				for (var i = 0, _len = splits.length; i < _len; i++) {
@@ -702,7 +703,8 @@ Typo.prototype = {
 
 					if (s[1]) {
 						for (var j = 0, _jlen = self.alphabet.length; j < _jlen; j++) {
-							replaces.push(s[0] + self.alphabet[j] + s[1]);
+							//replaces.push(s[0] + self.alphabet[j] + s[1]);
+                            // COMMENTING OUT FOR SPEED
 						}
 					}
 				}
