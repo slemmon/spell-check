@@ -17,8 +17,6 @@ define(function (require, exports, module) {
         misses          = {},
         typo, menu;
 
-    console.log(require);
-
     require('text');
     require(['text!dictionaries/en_US/en_US.aff', 'text!dictionaries/en_US/en_US.dic', 'typo'], function (aff, dict) {
         affBlob = aff;
@@ -120,12 +118,12 @@ define(function (require, exports, module) {
                     return;
                 }
 
-                //if (misses[selected] === true) {
+                if (misses[selected] === true) {
                     var _initial = new Date();
                     misses[selected] = typo.suggest(selected);
                     var _final = new Date();
                     console.log((_final.getTime() - _initial.getTime())/1000);
-                //}
+                }
                 console.log(misses[selected]);
 
                 menu.suggestionDivider = menu.addMenuDivider(Menus.FIRST).id;
@@ -163,9 +161,17 @@ define(function (require, exports, module) {
 
         // var camelCaseRegEx = new RegExp('([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*');  http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
 
+        var suggestQueue = [];
+        var queuedCt = 0;
+
         var spellOverlay = {
             token: function (stream, state) {
-                var ch, current;
+                //var suggestQueue = [],
+                //var queuedCt = 0,
+                var modulePath = FileUtils.getNativeModuleDirectoryPath(module) + '/',
+                    workerPath = modulePath + 'fetchSuggestions.js',
+                    ch, current, spawnWorker;
+
                 // see if the line type is allowed for spelling check
                 if (evalLineType(stream.string)) {
 
@@ -179,17 +185,42 @@ define(function (require, exports, module) {
 
                         current = stream.current();
 
-                        if (misses[current] || typo.check(current) === false) {
-                            misses[current] = true;
+                        spawnWorker = function () {
+                            if (suggestQueue.length === 0 || queuedCt > 7) {
+                                return false;
+                            }
 
-                            /*// web worker call for spelling suggestion
-                            var worker = new Worker('fetchSuggestions.js');
+                            var worker = new Worker(workerPath);
 
-                            worker.onMessage = function(e) {
-                                console.log(e);
+                            queuedCt++;
+
+                            worker.onmessage = function(e) {
+                                console.log(queuedCt);
+                                queuedCt--;
+                                spawnWorker();
                             };
 
-                            worker.postMessage([current]);*/
+                            //console.log('I should process: ' + suggestQueue.pop());
+                            //worker.postMessage(suggestQueue.pop());
+                        }
+
+                        if (misses[current] || typo.check(current) === false) {
+                            if (misses[current] === undefined) {
+                                misses[current] = true;
+                                suggestQueue.push(current);
+                                spawnWorker();
+                            }
+
+                            /*// web worker call for spelling suggestion
+                            var worker = new Worker(workerPath);
+
+                            worker.onmessage = function(e) {
+                                //console.log(current, e);
+                                console.log(queuedCt);
+                            };
+
+                            worker.isProcessingWord = current;
+                            worker.postMessage(current);*/
 
                             return "underline";
                         }
