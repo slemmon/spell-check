@@ -97,13 +97,14 @@ define(function (require, exports, module) {
                 var editor = EditorManager.getCurrentFullEditor(),
                     cm = editor._codeMirror,
                     sel = editor.getSelection(),
-                    selected = cm.getRange(sel.start, sel.end),
-                    suggestions = ['one', 'two'].reverse(),
+                    selectedWord = cm.getRange(sel.start, sel.end),
+                    suggestions = misses[selectedWord],
                     divider = menu.suggestionDivider,
                     lastItems = menu.suggestionItems;
 
                 // remove the suggestions divider if it exists already
                 if (divider) {
+                    console.log(divider);
                     menu.removeMenuDivider(divider);
                 }
 
@@ -114,17 +115,18 @@ define(function (require, exports, module) {
                     });
                 }
 
-                if (!misses[selected]) {
+                if (!misses[selectedWord]) {
                     return;
                 }
 
-                if (misses[selected] === true) {
+                if (misses[selectedWord] === true) {
                     var _initial = new Date();
-                    misses[selected] = typo.suggest(selected);
+                    misses[selectedWord] = suggestions = typo.suggest(selectedWord).reverse();
                     var _final = new Date();
                     console.log((_final.getTime() - _initial.getTime())/1000);
                 }
-                console.log(misses[selected]);
+
+                suggestions = suggestions.reverse();
 
                 menu.suggestionDivider = menu.addMenuDivider(Menus.FIRST).id;
                 menu.suggestionItems = [];
@@ -195,13 +197,23 @@ define(function (require, exports, module) {
                             queuedCt++;
 
                             worker.onmessage = function(e) {
-                                console.log(queuedCt);
+                                misses[current] = e.data.split(',');
                                 queuedCt--;
                                 spawnWorker();
                             };
 
                             //console.log('I should process: ' + suggestQueue.pop());
                             //worker.postMessage(suggestQueue.pop());
+
+                            var msg = {
+                                aff: affBlob,
+                                dict: dictBlob,
+                                word: suggestQueue.pop()
+                            };
+
+                            //console.log(suggestQueue);
+                            //worker.postMessage(JSON.stringify(msg));
+                            worker.postMessage(JSON.stringify(msg));
                         }
 
                         if (misses[current] || typo.check(current) === false) {
