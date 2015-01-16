@@ -46,6 +46,25 @@ define(function (require, exports, module) {
 
     ExtensionUtils.loadStyleSheet(module, "styles.css");
 
+    var getIgnoredWords = function () {
+        var ignoredWords = localStorage.getItem('slemmon.spell-check');
+        return ignoredWords ? JSON.parse(ignoredWords) : {};
+    }
+
+    var setIgnoredWords = function (words) {
+        words = (jQuery.isArray(words)) ? words : [words];
+        var ignoredWords = getIgnoredWords();
+        words.forEach(function (word) {
+            ignoredWords[word] = true;
+        });
+        localStorage.setItem('slemmon.spell-check', JSON.stringify(ignoredWords));
+        return ignoredWords;
+    }
+
+    var clearIgnoredWords = function () {
+        localStorage.removeItem('slemmon.spell-check');
+    }
+
     AppInit.appReady(function () {
         AppInit.htmlReady(function () {
             // runs the following logic each time an editor (file) is focused
@@ -99,20 +118,26 @@ define(function (require, exports, module) {
                     sel = editor.getSelection(),
                     selectedWord = cm.getRange(sel.start, sel.end),
                     suggestions = misses[selectedWord],
-                    divider = menu.suggestionDivider,
+                    dividers = menu.suggestionDivider || [],
                     lastItems = menu.suggestionItems;
 
                 // remove the suggestions divider if it exists already
-                if (divider) {
-                    console.log(divider);
+                /*if (divider) {
                     menu.removeMenuDivider(divider);
-                }
+                    menu.suggestionDivider = null;
+                }*/
+
+                dividers.forEach(function (divider) {
+                    menu.removeMenuDivider(divider);
+                });
+                menu.suggestionDivider = [];
 
                 // remove the last suggestions added to the menu if they exist
                 if (lastItems) {
                     lastItems.forEach(function (item) {
                         menu.removeMenuItem(item);
                     });
+                    menu.suggestionItems = null;
                 }
 
                 if (!misses[selectedWord]) {
@@ -120,24 +145,38 @@ define(function (require, exports, module) {
                 }
 
                 if (misses[selectedWord] === true) {
-                    var _initial = new Date();
+                    //var _initial = new Date();
                     misses[selectedWord] = suggestions = typo.suggest(selectedWord).reverse();
-                    var _final = new Date();
-                    console.log((_final.getTime() - _initial.getTime())/1000);
+                    //var _final = new Date();
+                    //console.log((_final.getTime() - _initial.getTime())/1000);
                 }
 
                 suggestions = suggestions.reverse();
 
-                menu.suggestionDivider = menu.addMenuDivider(Menus.FIRST).id;
+                menu.suggestionDivider.push(menu.addMenuDivider(Menus.FIRST).id);
                 menu.suggestionItems = [];
-                suggestions.forEach(function (item, i) {
-                    var t = 'a-' + performance.now();
-                    menu.suggestionItems.push(t);
-                    CommandManager.register(item, t, function () {
-                        cm.replaceRange(item, sel.start, sel.end);
-                    });
-                    menu.addMenuItem(t, null, Menus.FIRST);
+
+                var cmdId = 'a-' + performance.now();
+                menu.suggestionItems.push(cmdId);
+                CommandManager.register('* IGNORE - ' + selectedWord, cmdId, function () {
+                    setIgnoredWords(selectedWord);
+                    misses[selectedWord] = null;
+                    spellCheckEditor();
                 });
+                menu.addMenuItem(cmdId, null, Menus.FIRST);
+
+                if (suggestions.length > 0) {
+                    menu.suggestionDivider.push(menu.addMenuDivider(Menus.FIRST).id);
+
+                    suggestions.forEach(function (item, i) {
+                        var cmdId = 'a-' + performance.now();
+                        menu.suggestionItems.push(cmdId);
+                        CommandManager.register(item, cmdId, function () {
+                            cm.replaceRange(item, sel.start, sel.end);
+                        });
+                        menu.addMenuItem(cmdId, null, Menus.FIRST);
+                    });
+                }
             });
         });
     });
@@ -216,7 +255,7 @@ define(function (require, exports, module) {
                             worker.postMessage(JSON.stringify(msg));
                         }
 
-                        if (misses[current] || typo.check(current) === false) {
+                        if (misses[current] || (!getIgnoredWords()[current] && typo.check(current) === false)) {
                             if (misses[current] === undefined) {
                                 misses[current] = true;
                                 suggestQueue.push(current);
