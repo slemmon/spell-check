@@ -200,7 +200,8 @@ define(function (require, exports, module) {
             cm = editor ? editor._codeMirror : false,
             rx_alpha = new RegExp('[a-z]', 'i');
 
-        // var camelCaseRegEx = new RegExp('([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*');  http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
+        // http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
+        var camelCaseRegEx = /([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*/;
 
         var suggestQueue = [];
         var queuedCt = 0;
@@ -255,25 +256,28 @@ define(function (require, exports, module) {
                             worker.postMessage(JSON.stringify(msg));
                         }
 
-                        if (misses[current] || (!getIgnoredWords()[current] && typo.check(current) === false)) {
-                            if (misses[current] === undefined) {
-                                misses[current] = true;
-                                suggestQueue.push(current);
-                                spawnWorker();
+                        var camel = current.match(camelCaseRegEx);
+                        if (!camel) {
+                            if (misses[current] || (!getIgnoredWords()[current] && typo.check(current) === false)) {
+                                if (misses[current] === undefined) {
+                                    misses[current] = true;
+                                    suggestQueue.push(current);
+                                    spawnWorker();
+                                }
+
+                                /*// web worker call for spelling suggestion
+                                var worker = new Worker(workerPath);
+
+                                worker.onmessage = function(e) {
+                                    //console.log(current, e);
+                                    //console.log(queuedCt);
+                                };
+
+                                worker.isProcessingWord = current;
+                                worker.postMessage(current);*/
+
+                                return "underline";
                             }
-
-                            /*// web worker call for spelling suggestion
-                            var worker = new Worker(workerPath);
-
-                            worker.onmessage = function(e) {
-                                //console.log(current, e);
-                                console.log(queuedCt);
-                            };
-
-                            worker.isProcessingWord = current;
-                            worker.postMessage(current);*/
-
-                            return "underline";
                         }
                         return null;
                     }

@@ -124,10 +124,6 @@ Typo.prototype = {
 
 		var worker = new Worker('worker.js');
 
-		worker.onmessage = function(e) {
-			console.log(e.data); // e.data should be an array of ArrayBuffers.
-		};
-
 		worker.postMessage(path);
 	},
 
