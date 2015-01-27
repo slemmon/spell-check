@@ -113,6 +113,18 @@ define(function (require, exports, module) {
             menu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 
             $(menu).on("beforeContextMenuOpen", function (a) {
+                var key = performance.now();
+                $.get("http://service.afterthedeadline.com/checkDocument?" + key + "=8&data=wether78lkjcack", function (data) {
+                    var el = data.querySelectorAll("suggestions > option");
+                    //var el = data.querySelector("results > error > type");
+                    console.log(data);
+                    //console.log(el.textContent);
+                    console.log(el);
+                    
+                    console.log(el.item(0));
+                });
+                
+                return;
                 var editor = EditorManager.getCurrentFullEditor(),
                     cm = editor._codeMirror,
                     sel = editor.getSelection(),
@@ -258,7 +270,7 @@ define(function (require, exports, module) {
 
                         var camel = current.match(camelCaseRegEx);
                         if (!camel) {
-                            if (misses[current] || (!getIgnoredWords()[current] && typo.check(current) === false)) {
+                            if (misses[current] || (current.length < 19 && !getIgnoredWords()[current] && typo.check(current) === false)) {
                                 if (misses[current] === undefined) {
                                     misses[current] = true;
                                     suggestQueue.push(current);
