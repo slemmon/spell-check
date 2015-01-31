@@ -1,7 +1,11 @@
 // single line commentz
 // camelCase
 // 'zz'
+// plugin
+// hjjkjjkkk
+// commentzd
 // 10
+// programmatically
 
 var foo;
 

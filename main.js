@@ -15,6 +15,8 @@ define(function (require, exports, module) {
         ExtensionUtils  = brackets.getModule("utils/ExtensionUtils"),
         FileUtils       = brackets.getModule('file/FileUtils'),
         misses          = {},
+        spellKey        = performance.now(),
+        spellCheckUrl   = "http://service.afterthedeadline.com/checkDocument?",
         typo, menu;
 
     require('text');
@@ -112,17 +114,109 @@ define(function (require, exports, module) {
 
             menu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 
-            $(menu).on("beforeContextMenuOpen", function (a) {
-                var key = performance.now();
-                $.get("http://service.afterthedeadline.com/checkDocument?" + key + "=8&data=wether78lkjcack", function (data) {
-                    var el = data.querySelectorAll("suggestions > option");
-                    //var el = data.querySelector("results > error > type");
-                    console.log(data);
-                    //console.log(el.textContent);
-                    console.log(el);
-                    
-                    console.log(el.item(0));
+            function addSuggestions (data, word, failed) {
+                var editor = EditorManager.getCurrentFullEditor(),
+                    cm = editor._codeMirror,
+                    sel = editor.getSelection();
+                //var el = data.querySelectorAll("suggestions > option");
+                //var errType = data.querySelector("results > error > type");
+
+                //console.log(el.textContent);
+                //console.log('length', el.length);
+                //console.log('el', el);
+
+                //console.log(el.item(0));
+
+                //console.log(errType);
+                menu.suggestionDivider.push(menu.addMenuDivider(Menus.FIRST).id);
+
+                var cmdId = 'a-' + performance.now();
+                menu.suggestionItems.push(cmdId);
+                CommandManager.register('* IGNORE - ' + word, cmdId, function () {
+                    setIgnoredWords(word);
+                    misses[word] = null;
+                    spellCheckEditor();
                 });
+                menu.addMenuItem(cmdId, null, Menus.FIRST);
+
+                if (data.length > 0) {
+                    menu.suggestionDivider.push(menu.addMenuDivider(Menus.FIRST).id);
+
+                    data.forEach(function (item, i) {
+                        var cmdId = 'a-' + performance.now();
+                        menu.suggestionItems.push(cmdId);
+                        CommandManager.register(item, cmdId, function () {
+                            cm.replaceRange(item, sel.start, sel.end);
+                        });
+                        menu.addMenuItem(cmdId, null, Menus.FIRST);
+                    });
+                }
+            }
+
+            $(menu).on("beforeContextMenuOpen", function (a) {
+                var editor = EditorManager.getCurrentFullEditor(),
+                    cm = editor._codeMirror,
+                    sel = editor.getSelection(),
+                    selectedWord = cm.getRange(sel.start, sel.end),
+                    //suggestions = misses[selectedWord],
+                    dividers = menu.suggestionDivider || [],
+                    lastItems = menu.suggestionItems || [];
+
+                dividers.forEach(function (divider) {
+                    menu.removeMenuDivider(divider);
+                });
+                menu.suggestionDivider = [];
+
+                // remove the last suggestions added to the menu if they exist
+                lastItems.forEach(function (item) {
+                    menu.removeMenuItem(item);
+                });
+                menu.suggestionItems = [];
+
+                if (!misses[selectedWord]) {
+                    return;
+                }
+
+                //return;
+                //selectedWord = "asdfasasdd889ss";
+                if (misses[selectedWord] === true) {
+                    $.ajax({
+                        url: spellCheckUrl + spellKey + "=8&data=" + selectedWord
+                    })
+                    .done(function (data) {
+                        var el = data.querySelectorAll("suggestions > option");
+                        var errType = data.querySelector("results > error > type");
+                        var items = [];
+                        var i = 0;
+                        var len;
+
+                        //console.log(el.textContent);
+                        //console.log('length', el.length);
+                        //console.log('el', el);
+
+                        //console.log(el.item(0));
+                        if (!errType) {
+                            setIgnoredWords(selectedWord);
+                            misses[selectedWord] = null;
+                            spellCheckEditor();
+                        }
+                        if (errType && errType.textContent === "spelling") {
+                            len = el.length;
+                            //if (el.length !== 0) {
+                                for (;i < len;i++) {
+                                    items.push(el.item(i).textContent);
+                                }
+                                misses[selectedWord] = items;
+                                addSuggestions(items, selectedWord);
+                            //}
+                        }
+                    })
+                    .fail(function () {
+                        addSuggestions(data, selectedWord, true);
+                    });
+                } else if (misses[selectedWord] !== false) {
+                    addSuggestions(misses[selectedWord], selectedWord);
+                }
                 
                 return;
                 var editor = EditorManager.getCurrentFullEditor(),
@@ -215,7 +309,7 @@ define(function (require, exports, module) {
         // http://stackoverflow.com/questions/1128305/regular-expression-to-identify-camelcased-words
         var camelCaseRegEx = /([A-Z]|[a-z])([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*/;
 
-        var suggestQueue = [];
+        //var suggestQueue = [];
         var queuedCt = 0;
 
         var spellOverlay = {
@@ -224,7 +318,9 @@ define(function (require, exports, module) {
                 //var queuedCt = 0,
                 var modulePath = FileUtils.getNativeModuleDirectoryPath(module) + '/',
                     workerPath = modulePath + 'fetchSuggestions.js',
-                    ch, current, spawnWorker;
+                    ch,
+                    current;
+                    //spawnWorker;
 
                 // see if the line type is allowed for spelling check
                 if (evalLineType(stream.string)) {
@@ -239,7 +335,7 @@ define(function (require, exports, module) {
 
                         current = stream.current();
 
-                        spawnWorker = function () {
+                        /*spawnWorker = function () {
                             if (suggestQueue.length === 0 || queuedCt > 7) {
                                 return false;
                             }
@@ -266,15 +362,15 @@ define(function (require, exports, module) {
                             //console.log(suggestQueue);
                             //worker.postMessage(JSON.stringify(msg));
                             worker.postMessage(JSON.stringify(msg));
-                        }
+                        }*/
 
                         var camel = current.match(camelCaseRegEx);
                         if (!camel) {
                             if (misses[current] || (current.length < 19 && !getIgnoredWords()[current] && typo.check(current) === false)) {
                                 if (misses[current] === undefined) {
                                     misses[current] = true;
-                                    suggestQueue.push(current);
-                                    spawnWorker();
+                                    //suggestQueue.push(current);
+                                    //spawnWorker();
                                 }
 
                                 /*// web worker call for spelling suggestion
