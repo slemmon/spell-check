@@ -2,10 +2,17 @@
 // camelCase
 // 'zz'
 // plugin
+// plugins
 // hjjkjjkkk
 // commentzd
 // 10
 // programmatically
+// someone's
+// can't
+// "'isn'd"
+// we've
+
+// alphabetizedforyoursafetyandstuff
 
 var foo;
 
@@ -15,4 +22,5 @@ var foo;
 
 var fun = function () {
     // in-function comment
+    something = 'else'; // more commentz
 };

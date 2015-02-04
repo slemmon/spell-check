@@ -288,8 +288,9 @@ define(function (require, exports, module) {
     });
 
     function evalLineType(line) {
-        var rx_js_block = /^(\s+)?\*.+/ig,  // javascript block comment
-            rx_js_line = /^(\s+)?\/\/.+/ig; // javascript single line comment
+        var rx_js_block = /^(\s+)?\*.+/ig,          // javascript block comment
+            rx_js_line = /^(\s+)?\/\/.+/ig,         // javascript single line comment
+            rx_js_inline = /^(.+)?(\s+)?\/\/.+/ig   // javascript inline comment
 
         if (line.match(rx_js_block)) {
             return true;
@@ -328,6 +329,15 @@ define(function (require, exports, module) {
                     if (stream.match(rx_alpha)) {
                         while ((ch = stream.peek()) != null) {
                             if (!ch.match(rx_alpha)) {
+                                // allows for the checking of contractions
+                                if (ch === "'") {
+                                    stream.next();
+                                    if (stream.peek() && stream.peek().match(rx_alpha)) {
+                                        stream.next();
+                                    } else {
+                                        stream.backUp(1);
+                                    }
+                                }
                                 break;
                             }
                             stream.next();
@@ -366,7 +376,7 @@ define(function (require, exports, module) {
 
                         var camel = current.match(camelCaseRegEx);
                         if (!camel) {
-                            if (misses[current] || (current.length < 19 && !getIgnoredWords()[current] && typo.check(current) === false)) {
+                            if (misses[current] || (!getIgnoredWords()[current] && typo.check(current) === false)) {
                                 if (misses[current] === undefined) {
                                     misses[current] = true;
                                     //suggestQueue.push(current);
